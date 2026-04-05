@@ -193,10 +193,10 @@ class TestRedirectEndpoint:
         assert response.status_code == 400
 
 
-# ─── GET /urls ───────────────────────────────────────────────────────────────
+# ─── /urls CRUD ──────────────────────────────────────────────────────────────
 
-class TestListUrlsEndpoint:
-    """Integration tests for the GET /urls endpoint."""
+class TestUrlsCrud:
+    """Integration tests for /urls CRUD endpoints."""
 
     def test_list_urls_returns_200(self, client):
         response = client.get("/urls")
@@ -207,6 +207,10 @@ class TestListUrlsEndpoint:
         data = response.get_json()
         assert isinstance(data, list)
 
+    def test_list_urls_empty_when_no_entries(self, client):
+        response = client.get("/urls")
+        assert response.get_json() == []
+
     def test_list_urls_shows_created_entry(self, client):
         client.post("/shorten", json={"url": "https://listed.com"})
         response = client.get("/urls")
@@ -214,9 +218,123 @@ class TestListUrlsEndpoint:
         urls = [item["original_url"] for item in data]
         assert "https://listed.com" in urls
 
-    def test_list_urls_empty_when_no_entries(self, client):
-        response = client.get("/urls")
-        assert response.get_json() == []
+    def test_create_url_via_post(self, client):
+        response = client.post(
+            "/urls",
+            json={"original_url": "https://example.com/test", "title": "Test"},
+        )
+        assert response.status_code == 201
+        data = response.get_json()
+        assert "short_code" in data
+        assert data["original_url"] == "https://example.com/test"
+        assert data["title"] == "Test"
+
+    def test_create_url_with_user_id(self, client):
+        User.create(id=1, username="testuser", email="test@test.com")
+        response = client.post(
+            "/urls",
+            json={"original_url": "https://example.com", "user_id": 1},
+        )
+        assert response.status_code == 201
+        assert response.get_json()["user_id"] == 1
+
+    def test_create_url_missing_field(self, client):
+        response = client.post("/urls", json={"title": "no url"})
+        assert response.status_code == 400
+
+    def test_create_url_invalid_url(self, client):
+        response = client.post(
+            "/urls", json={"original_url": "not-valid"}
+        )
+        assert response.status_code == 400
+
+    def test_create_url_empty_body(self, client):
+        response = client.post(
+            "/urls", data="", content_type="application/json"
+        )
+        assert response.status_code == 400
+
+    def test_create_url_empty_string(self, client):
+        response = client.post("/urls", json={"original_url": ""})
+        assert response.status_code == 400
+
+    def test_get_url_by_id(self, client):
+        create = client.post(
+            "/urls",
+            json={"original_url": "https://findme.com"},
+        )
+        url_id = create.get_json()["id"]
+        response = client.get(f"/urls/{url_id}")
+        assert response.status_code == 200
+        assert response.get_json()["id"] == url_id
+
+    def test_get_url_not_found(self, client):
+        response = client.get("/urls/99999")
+        assert response.status_code == 404
+
+    def test_update_url_title(self, client):
+        create = client.post(
+            "/urls",
+            json={"original_url": "https://update.com", "title": "Old"},
+        )
+        url_id = create.get_json()["id"]
+        response = client.put(
+            f"/urls/{url_id}", json={"title": "New Title"}
+        )
+        assert response.status_code == 200
+        assert response.get_json()["title"] == "New Title"
+
+    def test_deactivate_url(self, client):
+        create = client.post(
+            "/urls",
+            json={"original_url": "https://deactivate.com"},
+        )
+        url_id = create.get_json()["id"]
+        response = client.put(
+            f"/urls/{url_id}", json={"is_active": False}
+        )
+        assert response.status_code == 200
+        assert response.get_json()["is_active"] is False
+
+    def test_update_url_not_found(self, client):
+        response = client.put("/urls/99999", json={"title": "nope"})
+        assert response.status_code == 404
+
+    def test_update_url_empty_body(self, client):
+        create = client.post(
+            "/urls", json={"original_url": "https://empty.com"}
+        )
+        url_id = create.get_json()["id"]
+        response = client.put(
+            f"/urls/{url_id}", data="", content_type="application/json"
+        )
+        assert response.status_code == 400
+
+    def test_delete_url(self, client):
+        create = client.post(
+            "/urls", json={"original_url": "https://delete.com"}
+        )
+        url_id = create.get_json()["id"]
+        response = client.delete(f"/urls/{url_id}")
+        assert response.status_code == 204
+
+    def test_delete_url_not_found(self, client):
+        response = client.delete("/urls/99999")
+        assert response.status_code == 404
+
+    def test_filter_by_is_active(self, client):
+        response = client.get("/urls?is_active=true")
+        assert response.status_code == 200
+
+    def test_deactivated_url_returns_410(self, client):
+        create = client.post(
+            "/urls", json={"original_url": "https://gone.com"}
+        )
+        data = create.get_json()
+        client.put(f"/urls/{data['id']}", json={"is_active": False})
+        response = client.get(f"/{data['short_code']}")
+        assert response.status_code == 410
+
 
 
 # ─── GET /users ──────────────────────────────────────────────────────────────
