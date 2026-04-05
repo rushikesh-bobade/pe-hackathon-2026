@@ -237,6 +237,140 @@ class TestUsersEndpoint:
         response = client.get("/users/99999")
         assert response.status_code == 404
 
+    def test_create_user(self, client):
+        response = client.post(
+            "/users",
+            json={"username": "newuser", "email": "new@test.com"},
+        )
+        assert response.status_code == 201
+        data = response.get_json()
+        assert data["username"] == "newuser"
+        assert data["email"] == "new@test.com"
+        assert "id" in data
+
+    def test_create_user_missing_fields(self, client):
+        response = client.post("/users", json={"username": "only_name"})
+        assert response.status_code == 400
+
+    def test_create_user_empty_body(self, client):
+        response = client.post(
+            "/users", data="", content_type="application/json"
+        )
+        assert response.status_code == 400
+
+    def test_create_user_duplicate(self, client):
+        client.post(
+            "/users",
+            json={"username": "dup_user", "email": "dup@test.com"},
+        )
+        response = client.post(
+            "/users",
+            json={"username": "dup_user", "email": "dup2@test.com"},
+        )
+        assert response.status_code == 409
+
+    def test_get_user_by_id(self, client):
+        create = client.post(
+            "/users",
+            json={"username": "findme", "email": "find@test.com"},
+        )
+        user_id = create.get_json()["id"]
+        response = client.get(f"/users/{user_id}")
+        assert response.status_code == 200
+        assert response.get_json()["username"] == "findme"
+
+    def test_update_user(self, client):
+        create = client.post(
+            "/users",
+            json={"username": "original", "email": "orig@test.com"},
+        )
+        user_id = create.get_json()["id"]
+        response = client.put(
+            f"/users/{user_id}",
+            json={"username": "updated"},
+        )
+        assert response.status_code == 200
+        assert response.get_json()["username"] == "updated"
+
+    def test_update_user_not_found(self, client):
+        response = client.put(
+            "/users/99999",
+            json={"username": "nope"},
+        )
+        assert response.status_code == 404
+
+    def test_update_user_empty_body(self, client):
+        create = client.post(
+            "/users",
+            json={"username": "emptyupd", "email": "emptyupd@test.com"},
+        )
+        user_id = create.get_json()["id"]
+        response = client.put(
+            f"/users/{user_id}",
+            data="",
+            content_type="application/json",
+        )
+        assert response.status_code == 400
+
+    def test_delete_user(self, client):
+        create = client.post(
+            "/users",
+            json={"username": "deleteme", "email": "del@test.com"},
+        )
+        user_id = create.get_json()["id"]
+        response = client.delete(f"/users/{user_id}")
+        assert response.status_code == 204
+        # Confirm deleted
+        get_resp = client.get(f"/users/{user_id}")
+        assert get_resp.status_code == 404
+
+    def test_delete_user_not_found(self, client):
+        response = client.delete("/users/99999")
+        assert response.status_code == 404
+
+    def test_list_users_pagination(self, client):
+        for i in range(5):
+            client.post(
+                "/users",
+                json={"username": f"page_user_{i}", "email": f"p{i}@test.com"},
+            )
+        response = client.get("/users?page=1&per_page=2")
+        data = response.get_json()
+        assert len(data) == 2
+
+
+# ─── /events ─────────────────────────────────────────────────────────────────
+
+class TestEventsEndpoint:
+    """Integration tests for the /events endpoint."""
+
+    def test_list_events_returns_200(self, client):
+        response = client.get("/events")
+        assert response.status_code == 200
+
+    def test_list_events_returns_json_list(self, client):
+        response = client.get("/events")
+        data = response.get_json()
+        assert isinstance(data, list)
+
+    def test_list_events_empty(self, client):
+        response = client.get("/events")
+        assert response.get_json() == []
+
+    def test_get_event_not_found(self, client):
+        response = client.get("/events/99999")
+        assert response.status_code == 404
+        data = response.get_json()
+        assert "error" in data
+
+    def test_list_events_filter_by_url_id(self, client):
+        response = client.get("/events?url_id=1")
+        assert response.status_code == 200
+
+    def test_list_events_filter_by_user_id(self, client):
+        response = client.get("/events?user_id=1")
+        assert response.status_code == 200
+
 
 # ─── Global Error Handlers (Gold Tier) ───────────────────────────────────────
 
@@ -258,3 +392,4 @@ class TestErrorHandlers:
         assert response.status_code == 405
         data = response.get_json()
         assert data is not None
+
