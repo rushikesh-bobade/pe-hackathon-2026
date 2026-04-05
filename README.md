@@ -12,7 +12,7 @@ A resilient URL shortener service built for the **MLH Production Engineering Hac
 |------|------------|--------|
 | Bronze | Unit tests + CI + `/health` endpoint | Done |
 | Silver | >50% coverage + integration tests + blocked deploys | Done (83%) |
-| Gold | >70% coverage + graceful errors + chaos resilience | Done |
+| Gold | >70% coverage + graceful errors + chaos resilience | Done (83%) |
 
 ---
 
