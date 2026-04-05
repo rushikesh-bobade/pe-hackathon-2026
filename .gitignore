@@ -58,3 +58,7 @@ judging/
 # Antigravity / Gemini agent files
 .gemini/
 .agents/
+
+# SQLite database files
+hackathon.db
+*.db

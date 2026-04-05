@@ -9,35 +9,28 @@ from peewee import SqliteDatabase
 
 from app import create_app
 from app.database import db
+from app.models.user import User
 from app.models.url import ShortenedURL
+from app.models.event import Event
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
 TEST_DB = SqliteDatabase(":memory:")
+MODELS = [User, ShortenedURL, Event]
 
 
 @pytest.fixture()
 def app():
     """Create a Flask test app wired to an in-memory SQLite database."""
-    # Initialize the DatabaseProxy to use the in-memory SQLite database.
-    # Using db.initialize() is required so the Peewee DatabaseProxy knows
-    # which real database to forward calls to.
     db.initialize(TEST_DB)
-
-    # Keep a persistent connection open for the duration of the test.
-    # In-memory SQLite databases are tied to their connection — if the
-    # connection closes, all data is lost. Flask's teardown_appcontext
-    # would close it after each request, so we override that behaviour in
-    # testing mode by NOT registering the usual hooks.
     TEST_DB.connect(reuse_if_open=True)
-    TEST_DB.create_tables([ShortenedURL], safe=True)
+    TEST_DB.create_tables(MODELS, safe=True)
 
     flask_app = create_app(testing=True)
 
     yield flask_app
 
-    # Cleanup
-    TEST_DB.drop_tables([ShortenedURL])
+    TEST_DB.drop_tables(MODELS)
     TEST_DB.close()
 
 
@@ -226,6 +219,25 @@ class TestListUrlsEndpoint:
         assert response.get_json() == []
 
 
+# ─── GET /users ──────────────────────────────────────────────────────────────
+
+class TestUsersEndpoint:
+    """Integration tests for the /users endpoint."""
+
+    def test_list_users_returns_200(self, client):
+        response = client.get("/users")
+        assert response.status_code == 200
+
+    def test_list_users_returns_json_list(self, client):
+        response = client.get("/users")
+        data = response.get_json()
+        assert isinstance(data, list)
+
+    def test_get_user_not_found(self, client):
+        response = client.get("/users/99999")
+        assert response.status_code == 404
+
+
 # ─── Global Error Handlers (Gold Tier) ───────────────────────────────────────
 
 class TestErrorHandlers:
@@ -242,7 +254,6 @@ class TestErrorHandlers:
         assert response.status_code == 404
 
     def test_405_returns_json(self, client):
-        # /health only supports GET
         response = client.post("/health")
         assert response.status_code == 405
         data = response.get_json()

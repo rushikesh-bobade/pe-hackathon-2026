@@ -16,10 +16,13 @@ def create_app(testing: bool = False):
         init_db(app)
 
         from app import models  # noqa: F401
+        from app.models.user import User
         from app.models.url import ShortenedURL
+        from app.models.event import Event
 
+        # Create tables in dependency order (FK constraints)
         with app.app_context():
-            db.create_tables([ShortenedURL], safe=True)
+            db.create_tables([User, ShortenedURL, Event], safe=True)
     else:
         # Testing: the test fixture already called db.initialize()
         # with an in-memory SQLite. Do NOT register connect/close
