@@ -490,6 +490,34 @@ class TestEventsEndpoint:
         assert response.status_code == 200
 
 
+# ─── /events ─────────────────────────────────────────────────────────────────
+
+class TestEventsEndpoint:
+    """Integration tests for the /events endpoint."""
+
+    def test_list_events_returns_200(self, client):
+        response = client.get("/events")
+        assert response.status_code == 200
+
+    def test_list_events_returns_json_list(self, client):
+        data = client.get("/events").get_json()
+        assert isinstance(data, list)
+
+    def test_list_events_empty(self, client):
+        assert client.get("/events").get_json() == []
+
+    def test_get_event_not_found(self, client):
+        response = client.get("/events/99999")
+        assert response.status_code == 404
+        assert "error" in response.get_json()
+
+    def test_filter_events_by_url_id(self, client):
+        assert client.get("/events?url_id=1").status_code == 200
+
+    def test_filter_events_by_user_id(self, client):
+        assert client.get("/events?user_id=1").status_code == 200
+
+
 # ─── Global Error Handlers (Gold Tier) ───────────────────────────────────────
 
 class TestErrorHandlers:
