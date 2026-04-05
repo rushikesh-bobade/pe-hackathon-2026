@@ -1,36 +1,43 @@
-# URL Shortener — Production Engineering Hackathon
+# ShieldURL — Chaos-Resilient URL Shortener
 
-A resilient URL shortener service built for the **MLH Production Engineering Hackathon**. This project demonstrates production-grade reliability engineering practices including automated testing, CI/CD gating, graceful error handling, and chaos-resilient containerization.
+A resilient URL shortener service built for the **MLH Production Engineering Hackathon 2026**. This project demonstrates production-grade reliability engineering practices including automated testing, CI/CD gating, graceful error handling, idempotent database seeding, and chaos-resilient containerization.
 
-**Stack:** Flask · Peewee ORM · PostgreSQL · Docker · GitHub Actions · pytest
+**Stack:** Flask · Peewee ORM · PostgreSQL · SQLite · Docker · GitHub Actions · pytest
 
 ---
 
-## 🏆 Quest: Reliability Engineering — Gold Tier
+## Quest: Reliability Engineering — Gold Tier
 
 | Tier | Requirement | Status |
 |------|------------|--------|
-| 🥉 Bronze | Unit tests + CI + `/health` endpoint | ✅ |
-| 🥈 Silver | >50% coverage + integration tests + blocked deploys | ✅ (81%) |
-| 🥇 Gold | >70% coverage + graceful errors + chaos resilience | ✅ |
+| Bronze | Unit tests + CI + `/health` endpoint | Done |
+| Silver | >50% coverage + integration tests + blocked deploys | Done (83%) |
+| Gold | >70% coverage + graceful errors + chaos resilience | Done |
 
 ---
 
 ## Quick Start
 
-### Local Development (with uv)
+### Local Development (no PostgreSQL needed)
 
 ```bash
-# 1. Install dependencies
+# 1. Clone the repo
+git clone https://github.com/rushikesh-bobade/pe-hackathon-2026.git
+cd pe-hackathon-2026
+
+# 2. Install dependencies
 uv sync --extra test
 
-# 2. Configure environment
-cp .env.example .env   # edit if your DB credentials differ
+# 3. Configure environment
+cp .env.example .env
 
-# 3. Run the server
+# 4. Seed the database (idempotent — safe to run multiple times)
+uv run seed.py
+
+# 5. Run the server
 uv run run.py
 
-# 4. Verify
+# 6. Verify
 curl http://localhost:5000/health
 # → {"status":"ok"}
 ```
@@ -38,7 +45,7 @@ curl http://localhost:5000/health
 ### Docker (Production)
 
 ```bash
-# Start the full stack (app + PostgreSQL)
+# Start the full stack (app + PostgreSQL + auto-seeding)
 docker-compose up --build -d
 
 # Verify
@@ -59,6 +66,8 @@ docker ps  # It comes back automatically (restart: always)
 | `POST` | `/shorten` | Shorten a URL |
 | `GET` | `/<short_code>` | Redirect to the original URL |
 | `GET` | `/urls` | List all shortened URLs |
+| `GET` | `/users` | List all users |
+| `GET` | `/users/<id>` | Get a single user by ID |
 
 ### Example: Shorten a URL
 
@@ -80,6 +89,20 @@ Response:
 
 ---
 
+## Database Seeding
+
+The project includes an idempotent seed script that loads MLH-provided CSV data:
+
+```bash
+uv run seed.py
+```
+
+- Loads `users.csv`, `urls.csv`, `events.csv` in foreign key order
+- Safe to run multiple times — checks if data exists before inserting
+- Runs automatically on Docker container startup via `entrypoint.sh`
+
+---
+
 ## Testing
 
 ```bash
@@ -90,10 +113,11 @@ uv run pytest
 uv run pytest --no-cov -v
 ```
 
-### Test Coverage: 81%
+### Test Coverage: 83%
 
-- **Unit Tests** (`tests/test_units.py`): Test `generate_short_code()` and `is_valid_url()` in isolation.
-- **Integration Tests** (`tests/test_integration.py`): Full API tests using Flask's test client and in-memory SQLite.
+- **53 total tests** (16 unit + 37 integration)
+- **Unit Tests** (`tests/test_units.py`): Test `generate_short_code()` and `is_valid_url()` in isolation
+- **Integration Tests** (`tests/test_integration.py`): Full API tests using Flask test client and in-memory SQLite
 
 ---
 
@@ -101,10 +125,10 @@ uv run pytest --no-cov -v
 
 GitHub Actions runs on every push and pull request:
 
-1. **Spins up a PostgreSQL service** container
-2. **Installs dependencies** via `uv`
-3. **Runs the full test suite** with coverage
-4. **Blocks the pipeline** if any test fails or coverage drops below 70%
+1. Spins up a PostgreSQL service container
+2. Installs dependencies via `uv`
+3. Runs the full test suite with coverage
+4. Blocks the pipeline if any test fails or coverage drops below 70%
 
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
@@ -113,13 +137,16 @@ See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 ## Reliability Features
 
 ### Graceful Error Handling
-All errors return clean JSON responses — never raw HTML or Python stack traces.
+All errors return clean JSON responses — never raw HTML or Python stack traces. Global handlers for 400, 404, 405, and 500 errors.
 
 ### Chaos Resilience
 The Docker setup uses `restart: always` on both the app and database. Kill either container and it auto-restarts within seconds.
 
 ### Input Validation
 Every request is validated before touching the database. Invalid URLs, missing fields, and bad short codes all return descriptive `400` errors.
+
+### Idempotent Seeding
+The `seed.py` script checks if tables already have data before inserting, preventing duplicates on repeated runs — an SRE best practice for zero-touch deployments.
 
 ---
 
@@ -133,26 +160,36 @@ Every request is validated before touching the database. Invalid URLs, missing f
 ## Project Structure
 
 ```
-pehackathon/
+pe-hackathon-2026/
 ├── app/
 │   ├── __init__.py              # App factory with global error handlers
-│   ├── database.py              # DatabaseProxy, BaseModel, connection hooks
+│   ├── database.py              # DatabaseProxy, BaseModel, SQLite/Postgres support
 │   ├── models/
 │   │   ├── __init__.py          # Model registration
-│   │   └── url.py               # ShortenedURL model + short code generator
+│   │   ├── user.py              # User model
+│   │   ├── url.py               # ShortenedURL model + short code generator
+│   │   └── event.py             # Event/analytics model
 │   └── routes/
 │       ├── __init__.py          # Blueprint registration
-│       └── shortener.py         # URL shortener API endpoints
+│       ├── shortener.py         # URL shortener API endpoints
+│       └── users.py             # User API endpoints
 ├── tests/
 │   ├── conftest.py              # pytest configuration
 │   ├── test_units.py            # Unit tests (no DB)
-│   └── test_integration.py     # Integration tests (in-memory SQLite)
+│   └── test_integration.py      # Integration tests (in-memory SQLite)
 ├── docs/
 │   ├── ERROR_HANDLING.md        # Error handling documentation
 │   └── FAILURE_MODES.md         # Failure modes documentation
-├── .github/workflows/ci.yml    # CI pipeline
+├── scripts/
+│   └── chaos_test.sh            # Chaos engineering demo script
+├── .github/workflows/ci.yml     # CI pipeline
 ├── Dockerfile                   # Production container
 ├── docker-compose.yml           # Full stack with restart policies
+├── entrypoint.sh                # Docker entrypoint (seed + start)
+├── seed.py                      # Idempotent CSV data seeder
+├── users.csv                    # MLH seed data — users
+├── urls.csv                     # MLH seed data — URLs
+├── events.csv                   # MLH seed data — events
 ├── pyproject.toml               # Dependencies + test config
 └── run.py                       # Entry point
 ```
