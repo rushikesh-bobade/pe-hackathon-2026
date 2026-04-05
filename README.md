@@ -1,7 +1,7 @@
 # ShieldURL — Chaos-Resilient URL Shortener
 
 [![CI — Test & Coverage](https://github.com/rushikesh-bobade/pe-hackathon-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/rushikesh-bobade/pe-hackathon-2026/actions/workflows/ci.yml)
-![Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Gold Tier](https://img.shields.io/badge/quest-Gold%20Tier-gold)
 
@@ -16,8 +16,8 @@ A resilient URL shortener service built for the **MLH Production Engineering Hac
 | Tier | Requirement | Status |
 |------|------------|--------|
 | Bronze | Unit tests + CI + `/health` endpoint | Done |
-| Silver | >50% coverage + integration tests + blocked deploys | Done (83%) |
-| Gold | >70% coverage + graceful errors + chaos resilience | Done (83%) |
+| Silver | >50% coverage + integration tests + blocked deploys | Done (85%) |
+| Gold | >70% coverage + graceful errors + chaos resilience | Done (85%) |
 
 ---
 
@@ -73,6 +73,8 @@ docker ps  # It comes back automatically (restart: always)
 | `GET` | `/urls` | List all shortened URLs |
 | `GET` | `/users` | List all users |
 | `GET` | `/users/<id>` | Get a single user by ID |
+| `GET` | `/events` | List all events (filterable by `url_id`, `user_id`) |
+| `GET` | `/events/<id>` | Get a single event by ID |
 
 ### Example: Shorten a URL
 
@@ -118,9 +120,9 @@ uv run pytest
 uv run pytest --no-cov -v
 ```
 
-### Test Coverage: 83%
+### Test Coverage: 85%
 
-- **53 total tests** (16 unit + 37 integration)
+- **59 total tests** (16 unit + 43 integration)
 - **Unit Tests** (`tests/test_units.py`): Test `generate_short_code()` and `is_valid_url()` in isolation
 - **Integration Tests** (`tests/test_integration.py`): Full API tests using Flask test client and in-memory SQLite
 
@@ -176,8 +178,9 @@ pe-hackathon-2026/
 │   │   └── event.py             # Event/analytics model
 │   └── routes/
 │       ├── __init__.py          # Blueprint registration
-│       ├── shortener.py         # URL shortener API endpoints
-│       └── users.py             # User API endpoints
+│       ├── shortener.py         # URL shortener + redirect endpoints
+│       ├── users.py             # User API endpoints
+│       └── events.py            # Event API endpoints
 ├── tests/
 │   ├── conftest.py              # pytest configuration
 │   ├── test_units.py            # Unit tests (no DB)
