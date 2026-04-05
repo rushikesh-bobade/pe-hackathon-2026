@@ -6,29 +6,55 @@ __pycache__/
 *.egg
 dist/
 build/
+*.manifest
+*.spec
 
 # Virtual environment
 .venv/
+venv/
+env/
+ENV/
 
-# Environment variables
+# Environment variables (NEVER commit secrets)
 .env
+.env.local
+.env.*.local
 
 # uv
 uv.lock
 
-# IDE
+# IDE / Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
 
-# pytest
+# pytest / coverage
 .pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Docker volumes (local data)
+postgres_data/
+
+# Logs
+*.log
 
 # Judging (not visible to participants)
 judging/
+
+# Antigravity / Gemini agent files
+.gemini/
+.agents/

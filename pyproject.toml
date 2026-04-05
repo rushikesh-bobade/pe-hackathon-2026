@@ -1,11 +1,26 @@
 [project]
 name = "mlh-pe-hackathon"
 version = "0.1.0"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "faker>=33.0",
     "flask>=3.1",
+    "gunicorn>=22.0",
     "peewee>=3.17",
     "psycopg2-binary>=2.9",
     "python-dotenv>=1.0",
 ]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=app --cov-report=term-missing --cov-fail-under=70"
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/models/__init__.py"]
