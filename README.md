@@ -1,5 +1,10 @@
 # ShieldURL — Chaos-Resilient URL Shortener
 
+[![CI — Test & Coverage](https://github.com/rushikesh-bobade/pe-hackathon-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/rushikesh-bobade/pe-hackathon-2026/actions/workflows/ci.yml)
+![Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen)
+![Python](https://img.shields.io/badge/python-3.12-blue)
+![Gold Tier](https://img.shields.io/badge/quest-Gold%20Tier-gold)
+
 A resilient URL shortener service built for the **MLH Production Engineering Hackathon 2026**. This project demonstrates production-grade reliability engineering practices including automated testing, CI/CD gating, graceful error handling, idempotent database seeding, and chaos-resilient containerization.
 
 **Stack:** Flask · Peewee ORM · PostgreSQL · SQLite · Docker · GitHub Actions · pytest
